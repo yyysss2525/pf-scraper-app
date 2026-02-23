@@ -257,7 +257,7 @@
 
       <div class="row">
         <button id="btn-analyze" type="button">分析して画面に表示</button>
-        <button id="btn-download" type="button" class="secondary">CSVダウンロード（従来）</button>
+        <button id="btn-export" type="button" class="secondary">Excelダウンロード</button>
       </div>
       <div id="status" class="status"></div>
     </div>
@@ -477,37 +477,46 @@
         }
       }
 
-      async function handleDownload() {
-        setStatus('CSV作成中...', true);
+      async function handleExport() {
+        setStatus('Excel作成中...分析してファイルを生成します。', true);
         const url = document.getElementById('url').value.trim();
         const pages = Number(document.getElementById('pages').value || 1);
+        const txUrl = document.getElementById('txUrl').value.trim();
+        const txPagesRaw = document.getElementById('txPages').value;
+        const txPages = txPagesRaw ? Number(txPagesRaw) : undefined;
+        const threshold = Number(document.getElementById('threshold').value || 10);
+        const bedMin = document.getElementById('bedMin').value || undefined;
+        const bedMax = document.getElementById('bedMax').value || undefined;
+        const sizeMin = document.getElementById('sizeMin').value || undefined;
+        const sizeMax = document.getElementById('sizeMax').value || undefined;
         try {
-          const res = await fetch('/api/scrape', {
+          const res = await fetch('/api/export', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, pages }),
+            body: JSON.stringify({
+              listingUrl: url, listingPages: pages,
+              txUrl, txPages, thresholdPct: threshold,
+              bedMin, bedMax, sizeMin, sizeMax,
+            }),
           });
           if (!res.ok) throw new Error(await res.text());
-          const rows = res.headers.get('x-rows') || '?';
           const blob = await res.blob();
           const downloadUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = downloadUrl;
-          a.download = 'propertyfinder.csv';
+          a.download = 'propertyfinder_analysis.xlsx';
           document.body.appendChild(a);
           a.click();
           a.remove();
           URL.revokeObjectURL(downloadUrl);
-          setStatus(`完了しました。取得件数: ${rows}件`, true);
+          setStatus('Excelファイルをダウンロードしました。', true);
         } catch (err) {
           setStatus(`失敗: ${err.message}`, false);
         }
       }
 
       document.getElementById('btn-analyze').addEventListener('click', handleAnalyze);
-      document
-        .getElementById('btn-download')
-        .addEventListener('click', handleDownload);
+      document.getElementById('btn-export').addEventListener('click', handleExport);
     </script>
   </body>
 </html>

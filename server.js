@@ -2,6 +2,7 @@ const express = require('express');
 const https = require('https');
 const zlib = require('zlib');
 const path = require('path');
+const XLSX = require('xlsx');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -366,6 +367,95 @@ app.post('/api/analyze', async (req, res) => {
       filters,
     );
     res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('エラーが発生しました。もう一度お試しください。');
+  }
+});
+
+app.post('/api/export', async (req, res) => {
+  try {
+    const listingUrl = (req.body.listingUrl || DEFAULT_URL).trim();
+    const listingPages = Math.max(1, Math.min(10, Number(req.body.listingPages || 1)));
+    const txUrl = (req.body.txUrl || DEFAULT_TX_URL).trim();
+    const txPagesRaw = req.body.txPages;
+    const txPages = txPagesRaw ? Math.max(1, Math.min(20, Number(txPagesRaw))) : undefined;
+    const threshold = Math.max(1, Math.min(50, Number(req.body.thresholdPct || 10)));
+    const filters = {
+      bedMin: req.body.bedMin,
+      bedMax: req.body.bedMax,
+      sizeMin: req.body.sizeMin,
+      sizeMax: req.body.sizeMax,
+    };
+
+    const result = await analyze(listingUrl, listingPages, txUrl, txPages, threshold, filters);
+    const wb = XLSX.utils.book_new();
+
+    // シート1: 条件
+    const condRows = [
+      ['パラメータ', '値'],
+      ['検索結果URL', listingUrl],
+      ['取得ページ数', listingPages],
+      ['トランザクションURL', txUrl],
+      ['TX取得ページ数', txPages || '全件'],
+      ['しきい値 (%)', threshold],
+      ['Beds 最小', filters.bedMin || '(なし)'],
+      ['Beds 最大', filters.bedMax || '(なし)'],
+      ['Size 最小', filters.sizeMin || '(なし)'],
+      ['Size 最大', filters.sizeMax || '(なし)'],
+      [],
+      ['サマリ', ''],
+      ['トランザクション件数', result.tx.count],
+      ['Price/sqft 中央値', result.tx.median_price_per_sqft],
+      ['Price/sqft 平均', result.tx.avg_price_per_sqft],
+      ['リスティング件数', result.listings.length],
+    ];
+    const wsCond = XLSX.utils.aoa_to_sheet(condRows);
+    wsCond['!cols'] = [{ wch: 22 }, { wch: 80 }];
+    XLSX.utils.book_append_sheet(wb, wsCond, '条件・サマリ');
+
+    // シート2: トランザクション
+    const txHeader = ['Price', 'Price/sqft', 'Date', 'Beds', 'Size', 'Type'];
+    const txData = [txHeader, ...result.tx.items.map(t => [
+      t.price ?? '',
+      t.pricePerSqft ? Math.round(t.pricePerSqft * 100) / 100 : '',
+      t.transactionDate || '',
+      t.bedrooms ?? '',
+      t.propertySize ?? '',
+      t.propertyType || '',
+    ])];
+    const wsTx = XLSX.utils.aoa_to_sheet(txData);
+    wsTx['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 6 }, { wch: 10 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, wsTx, 'トランザクション');
+
+    // シート3: リスティング
+    const lHeader = ['タイトル', '価格', '通貨', 'Price/sqft', 'Median差(%)', 'Avg差(%)', 'Beds', 'Baths', 'Size', '単位', '評価', 'URL'];
+    const lData = [lHeader, ...result.listings.map(l => [
+      l.title || '',
+      l.price_value ?? '',
+      l.price_currency || '',
+      l.listing_price_per_sqft ? Math.round(l.listing_price_per_sqft * 100) / 100 : '',
+      l.diff_pct_median != null ? Math.round(l.diff_pct_median * 10) / 10 : '',
+      l.diff_pct_avg != null ? Math.round(l.diff_pct_avg * 10) / 10 : '',
+      l.bedrooms || '',
+      l.bathrooms || '',
+      l.size_value || '',
+      l.size_unit || '',
+      l.rating || '',
+      l.url || '',
+    ])];
+    const wsL = XLSX.utils.aoa_to_sheet(lData);
+    wsL['!cols'] = [
+      { wch: 40 }, { wch: 14 }, { wch: 6 }, { wch: 12 },
+      { wch: 12 }, { wch: 12 }, { wch: 6 }, { wch: 6 },
+      { wch: 10 }, { wch: 6 }, { wch: 8 }, { wch: 60 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsL, 'リスティング');
+
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.set('Content-Disposition', 'attachment; filename="propertyfinder_analysis.xlsx"');
+    res.send(Buffer.from(buf));
   } catch (err) {
     console.error(err);
     res.status(500).send('エラーが発生しました。もう一度お試しください。');
