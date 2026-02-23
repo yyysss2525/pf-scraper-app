@@ -137,6 +137,20 @@
       }
       th {
         background: #f9fafb;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+      }
+      th:hover {
+        background: #f0f1f3;
+      }
+      th .sort-arrow {
+        margin-left: 4px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      th .sort-arrow.active {
+        color: var(--primary);
       }
       .tag {
         padding: 2px 6px;
@@ -272,30 +286,80 @@
       const txTableEl = document.getElementById('tx-table');
       const listingTableEl = document.getElementById('listing-table');
 
+      // ソート状態を保持
+      let currentTxItems = [];
+      let currentListings = [];
+      const txSort = { key: null, asc: true };
+      const listingSort = { key: null, asc: true };
+
       function setStatus(text, ok = false) {
         statusEl.textContent = text;
         statusEl.className = 'status ' + (ok ? 'ok' : 'err');
       }
 
+      function sortArrow(sortState, key) {
+        if (sortState.key !== key) return '<span class="sort-arrow">⇅</span>';
+        return sortState.asc
+          ? '<span class="sort-arrow active">▲</span>'
+          : '<span class="sort-arrow active">▼</span>';
+      }
+
+      function sortItems(items, key, asc, getter) {
+        return [...items].sort((a, b) => {
+          let va = getter(a), vb = getter(b);
+          if (va === null || va === undefined || va === '') va = asc ? Infinity : -Infinity;
+          if (vb === null || vb === undefined || vb === '') vb = asc ? Infinity : -Infinity;
+          if (typeof va === 'string' && typeof vb === 'string') return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+          return asc ? va - vb : vb - va;
+        });
+      }
+
+      function toggleSort(sortState, key) {
+        if (sortState.key === key) { sortState.asc = !sortState.asc; }
+        else { sortState.key = key; sortState.asc = true; }
+      }
+
+      // --- トランザクションテーブル ---
+      const txColumns = [
+        { label: 'Price', key: 'price', get: t => Number(t.price) || 0 },
+        { label: 'Price/sqft', key: 'ppsf', get: t => t.pricePerSqft || 0 },
+        { label: 'Date', key: 'date', get: t => t.transactionDate || '' },
+        { label: 'Beds', key: 'beds', get: t => Number(t.bedrooms) },
+        { label: 'Size', key: 'size', get: t => Number(t.propertySize) || 0 },
+        { label: 'Type', key: 'type', get: t => t.propertyType || '' },
+      ];
+
       function renderTxTable(items) {
         if (!items.length) return '<div>データがありません。</div>';
-        const rows = items
-          .map(
-            t => `<tr>
-              <td>${t.price?.toLocaleString?.() ?? t.price ?? ''}</td>
-              <td>${t.pricePerSqft ? t.pricePerSqft.toFixed(2) : ''}</td>
-              <td>${t.transactionDate || ''}</td>
-              <td>${t.bedrooms ?? ''}</td>
-              <td>${t.propertySize ?? ''}</td>
-              <td>${t.propertyType || ''}</td>
-            </tr>`,
-          )
-          .join('');
-        return `<table>
-          <thead><tr><th>Price</th><th>Price/sqft</th><th>Date</th><th>Beds</th><th>Size</th><th>Type</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
+        const sorted = txSort.key
+          ? sortItems(items, txSort.key, txSort.asc, txColumns.find(c => c.key === txSort.key).get)
+          : items;
+        const ths = txColumns.map(c =>
+          `<th data-tx-sort="${c.key}">${c.label}${sortArrow(txSort, c.key)}</th>`
+        ).join('');
+        const rows = sorted.map(t => `<tr>
+          <td>${t.price?.toLocaleString?.() ?? t.price ?? ''}</td>
+          <td>${t.pricePerSqft ? t.pricePerSqft.toFixed(2) : ''}</td>
+          <td>${t.transactionDate || ''}</td>
+          <td>${t.bedrooms ?? ''}</td>
+          <td>${t.propertySize ?? ''}</td>
+          <td>${t.propertyType || ''}</td>
+        </tr>`).join('');
+        return `<table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table>`;
       }
+
+      // --- リスティングテーブル ---
+      const listingColumns = [
+        { label: 'タイトル', key: 'title', get: l => l.title || '' },
+        { label: '価格', key: 'price', get: l => Number(l.price_value) || 0 },
+        { label: 'Price/sqft', key: 'ppsf', get: l => l.listing_price_per_sqft || 0 },
+        { label: 'Median差', key: 'diffMedian', get: l => l.diff_pct_median ?? Infinity },
+        { label: 'Avg差', key: 'diffAvg', get: l => l.diff_pct_avg ?? Infinity },
+        { label: 'Beds', key: 'beds', get: l => Number(l.bedrooms) || 0 },
+        { label: 'Baths', key: 'baths', get: l => Number(l.bathrooms) || 0 },
+        { label: 'Size', key: 'size', get: l => Number(l.size_value) || 0 },
+        { label: '評価', key: 'rating', get: l => l.rating === '安い' ? 0 : l.rating === '妥当' ? 1 : 2 },
+      ];
 
       function renderListingTable(listings) {
         if (!listings.length) return '<div>データがありません。</div>';
@@ -303,38 +367,44 @@
           v === null || v === undefined || Number.isNaN(v)
             ? ''
             : `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
-        const rows = listings
-          .map(l => {
-            const tagClass =
-              l.rating === '安い' ? 'good' : l.rating === '高い' ? 'bad' : 'mid';
-            const ppsf = l.listing_price_per_sqft
-              ? l.listing_price_per_sqft.toFixed(2)
-              : '';
-            const diffMedian = fmtPct(l.diff_pct_median);
-            const diffAvg = fmtPct(l.diff_pct_avg);
-            const beds = l.bedrooms || '';
-            const baths = l.bathrooms || '';
-            const size = l.size_value || '';
-            const title = l.title || '';
-            const url = l.url || '#';
-            return `<tr>
-              <td><a href="${url}" target="_blank" rel="noreferrer">${title}</a></td>
-              <td>${l.price_value?.toLocaleString?.() ?? l.price_value ?? ''} ${l.price_currency || ''}</td>
-              <td>${ppsf}</td>
-              <td>${diffMedian}</td>
-              <td>${diffAvg}</td>
-              <td>${beds}</td>
-              <td>${baths}</td>
-              <td>${size} ${l.size_unit || ''}</td>
-              <td><span class="tag ${tagClass}">${l.rating}</span></td>
-            </tr>`;
-          })
-          .join('');
-        return `<table>
-          <thead><tr><th>タイトル</th><th>価格</th><th>Price/sqft</th><th>Median差</th><th>Avg差</th><th>Beds</th><th>Baths</th><th>Size</th><th>評価</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
+        const sorted = listingSort.key
+          ? sortItems(listings, listingSort.key, listingSort.asc, listingColumns.find(c => c.key === listingSort.key).get)
+          : listings;
+        const ths = listingColumns.map(c =>
+          `<th data-listing-sort="${c.key}">${c.label}${sortArrow(listingSort, c.key)}</th>`
+        ).join('');
+        const rows = sorted.map(l => {
+          const tagClass = l.rating === '安い' ? 'good' : l.rating === '高い' ? 'bad' : 'mid';
+          const ppsf = l.listing_price_per_sqft ? l.listing_price_per_sqft.toFixed(2) : '';
+          const url = l.url || '#';
+          return `<tr>
+            <td><a href="${url}" target="_blank" rel="noreferrer">${l.title || ''}</a></td>
+            <td>${l.price_value?.toLocaleString?.() ?? l.price_value ?? ''} ${l.price_currency || ''}</td>
+            <td>${ppsf}</td>
+            <td>${fmtPct(l.diff_pct_median)}</td>
+            <td>${fmtPct(l.diff_pct_avg)}</td>
+            <td>${l.bedrooms || ''}</td>
+            <td>${l.bathrooms || ''}</td>
+            <td>${l.size_value || ''} ${l.size_unit || ''}</td>
+            <td><span class="tag ${tagClass}">${l.rating}</span></td>
+          </tr>`;
+        }).join('');
+        return `<table><thead><tr>${ths}</tr></thead><tbody>${rows}</tbody></table>`;
       }
+
+      // ソートのクリックイベント（イベント委譲）
+      txTableEl.addEventListener('click', e => {
+        const th = e.target.closest('th[data-tx-sort]');
+        if (!th) return;
+        toggleSort(txSort, th.dataset.txSort);
+        txTableEl.innerHTML = renderTxTable(currentTxItems);
+      });
+      listingTableEl.addEventListener('click', e => {
+        const th = e.target.closest('th[data-listing-sort]');
+        if (!th) return;
+        toggleSort(listingSort, th.dataset.listingSort);
+        listingTableEl.innerHTML = renderListingTable(currentListings);
+      });
 
       async function handleAnalyze() {
         setStatus('分析中...少しお待ちください。', true);
@@ -372,6 +442,12 @@
           if (!res.ok) throw new Error(await res.text());
           const data = await res.json();
 
+          // データを保持
+          currentTxItems = data.tx?.items || [];
+          currentListings = data.listings || [];
+          txSort.key = null;
+          listingSort.key = null;
+
           // サマリ表示
           const txCount = data.tx?.count ?? 0;
           const median = data.tx?.median_price_per_sqft
@@ -390,12 +466,12 @@
           summarySection.style.display = 'block';
 
           // テーブル表示
-          txTableEl.innerHTML = renderTxTable(data.tx?.items || []);
-          listingTableEl.innerHTML = renderListingTable(data.listings || []);
+          txTableEl.innerHTML = renderTxTable(currentTxItems);
+          listingTableEl.innerHTML = renderListingTable(currentListings);
           txSection.style.display = 'block';
           listingSection.style.display = 'block';
 
-          setStatus('完了しました。画面に表示しています。', true);
+          setStatus('完了しました。ヘッダーをクリックでソートできます。', true);
         } catch (err) {
           setStatus(`失敗: ${err.message}`, false);
         }
