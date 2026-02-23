@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>使い方 - Property Finder スクレイパー</title>
+    <style>
+      :root {
+        --bg: #f4f6fb;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --good: #16a34a;
+        --mid: #6b7280;
+        --bad: #dc2626;
+        --code-bg: #f1f5f9;
+      }
+      body {
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+      .layout {
+        max-width: 900px;
+        margin: 0 auto 48px;
+        padding: 0 16px;
+      }
+      .hero {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb, #60a5fa);
+        color: #fff;
+        padding: 32px 16px 40px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.25);
+      }
+      .hero-inner {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      .hero-title {
+        font-size: 26px;
+        font-weight: 700;
+        margin: 0 0 6px;
+      }
+      .hero-sub {
+        font-size: 15px;
+        color: rgba(255, 255, 255, 0.85);
+        margin-bottom: 10px;
+      }
+      .hero-nav {
+        margin-top: 12px;
+      }
+      .hero-nav a {
+        color: rgba(255, 255, 255, 0.9);
+        text-decoration: none;
+        font-size: 14px;
+        padding: 6px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 6px;
+        transition: background 0.15s, border-color 0.15s;
+      }
+      .hero-nav a:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.6);
+      }
+      .section {
+        margin-top: 20px;
+        padding: 24px;
+        border-radius: 12px;
+        background: var(--card);
+        box-shadow: 0 8px 22px rgba(31, 41, 55, 0.08);
+      }
+      .section h2 {
+        margin: 0 0 16px;
+        font-size: 20px;
+        color: var(--primary-dark);
+        border-bottom: 2px solid var(--primary);
+        padding-bottom: 8px;
+      }
+      .section h3 {
+        margin: 20px 0 10px;
+        font-size: 16px;
+        color: var(--text);
+      }
+      .section p, .section li {
+        font-size: 14px;
+        line-height: 1.7;
+        color: var(--text);
+      }
+      .section ul, .section ol {
+        padding-left: 20px;
+      }
+      .section li {
+        margin-bottom: 6px;
+      }
+      code {
+        background: var(--code-bg);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+      }
+      .code-block {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 14px 18px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 13px;
+        font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+        line-height: 1.6;
+        margin: 10px 0;
+      }
+      .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        margin-right: 8px;
+        flex-shrink: 0;
+      }
+      .step {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 16px;
+      }
+      .step-content {
+        flex: 1;
+      }
+      .step-content p {
+        margin: 0;
+      }
+      .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #fff;
+      }
+      .tag.good { background: var(--good); }
+      .tag.mid { background: var(--mid); }
+      .tag.bad { background: var(--bad); }
+      .param-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 13px;
+      }
+      .param-table th, .param-table td {
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        text-align: left;
+      }
+      .param-table th {
+        background: #f9fafb;
+        font-weight: 600;
+      }
+      .note {
+        background: #eff6ff;
+        border-left: 4px solid var(--primary);
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        margin: 12px 0;
+        font-size: 13px;
+      }
+      .warning {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        margin: 12px 0;
+        font-size: 13px;
+      }
+      .screenshot {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 12px 0;
+        padding: 16px;
+        background: var(--code-bg);
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .toc {
+        list-style: none;
+        padding: 0;
+      }
+      .toc li {
+        margin-bottom: 8px;
+      }
+      .toc a {
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hero">
+      <div class="hero-inner">
+        <div class="hero-title">使い方ガイド</div>
+        <div class="hero-sub">Property Finder スクレイパーの使い方を解説します</div>
+        <div class="hero-nav">
+          <a href="/">ツールに戻る</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+
+      <!-- 目次 -->
+      <div class="section">
+        <h2>目次</h2>
+        <ul class="toc">
+          <li><a href="#overview">1. このツールについて</a></li>
+          <li><a href="#get-urls">2. URLの取得方法</a></li>
+          <li><a href="#analysis">3. 分析モードの使い方</a></li>
+          <li><a href="#csv">4. CSVダウンロードの使い方</a></li>
+          <li><a href="#params">5. パラメータの詳細</a></li>
+          <li><a href="#reading">6. 結果の読み方</a></li>
+          <li><a href="#tips">7. Tips &amp; FAQ</a></li>
+        </ul>
+      </div>
+
+      <!-- 1. 概要 -->
+      <div class="section" id="overview">
+        <h2>1. このツールについて</h2>
+        <p>
+          Property Finder スクレイパーは、<a href="https://www.propertyfinder.ae" target="_blank" rel="noreferrer">PropertyFinder.ae</a>
+          のリスティング（売り出し物件）と成約データ（トランザクション）を取得し、
+          物件の価格が<strong>割安・妥当・割高</strong>かを自動判定するツールです。
+        </p>
+
+        <h3>主な機能</h3>
+        <ul>
+          <li><strong>分析モード</strong> - リスティングと成約データを比較し、Price/sqftの中央値・平均値をもとに各物件を評価</li>
+          <li><strong>CSVダウンロード</strong> - リスティングデータをCSV形式でダウンロード（Excelなどで分析可能）</li>
+        </ul>
+
+        <h3>仕組み</h3>
+        <p>
+          PropertyFinderの検索結果ページに埋め込まれたデータ（Next.jsの<code>__NEXT_DATA__</code>）をパースして情報を取得します。
+          ヘッドレスブラウザは不要で、高速に動作します。
+        </p>
+      </div>
+
+      <!-- 2. URLの取得方法 -->
+      <div class="section" id="get-urls">
+        <h2>2. URLの取得方法（一番大事！）</h2>
+
+        <p>このツールには<strong>2つのURL</strong>が必要です。どちらもPropertyFinder.aeのサイトからコピーしてきます。</p>
+
+        <table class="param-table" style="margin:16px 0;">
+          <thead><tr><th>URL</th><th>何のデータ？</th><th>どこで取る？</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>検索結果URL</strong></td>
+              <td>現在売り出し中の物件一覧</td>
+              <td>PropertyFinderの検索ページ</td>
+            </tr>
+            <tr>
+              <td><strong>トランザクションURL</strong></td>
+              <td>過去の成約（実売）データ</td>
+              <td>PropertyFinderのトランザクションページ</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="warning">
+          <strong>重要:</strong> 2つのURLは<strong>同じエリア</strong>のものを使ってください。
+          例えば「JLTの売り出し物件」と「JLTの成約データ」のように。
+          違うエリア同士を比較しても意味のある結果は得られません。
+        </div>
+
+        <!-- 検索結果URL -->
+        <h3>検索結果URLの取得手順</h3>
+        <div class="step">
+          <span class="step-number">1</span>
+          <div class="step-content">
+            <p><a href="https://www.propertyfinder.ae/en/buy/properties-for-sale.html" target="_blank" rel="noreferrer">PropertyFinder.ae の検索ページ</a>を開きます。</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">2</span>
+          <div class="step-content">
+            <p>ページ上部の検索バーで条件を設定します:</p>
+            <ul style="margin-top:6px;">
+              <li><strong>Buy / Rent</strong> を選択（購入 or 賃貸）</li>
+              <li><strong>Location</strong> に調べたいエリア名を入力（例: "Jumeirah Lake Towers", "Downtown Dubai" など）</li>
+              <li>必要なら <strong>Property Type</strong>（Apartment, Villa など）も設定</li>
+            </ul>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">3</span>
+          <div class="step-content">
+            <p><strong>「Find」ボタン</strong>をクリックして検索を実行します。</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">4</span>
+          <div class="step-content">
+            <p>物件一覧が表示されたら、<strong>ブラウザのアドレスバーのURLをそのままコピー</strong>します。</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>コピーするURLの例:</strong><br/>
+          <code style="word-break:break-all;">https://www.propertyfinder.ae/en/search?l=10493&c=2&fu=0&rp=y&ob=mr</code><br/>
+          <span style="color:var(--muted);">↑ これが「Jumeirah Lake Towers / 購入」の検索結果URLです</span>
+        </div>
+
+        <!-- トランザクションURL -->
+        <h3>トランザクションURLの取得手順</h3>
+        <div class="step">
+          <span class="step-number">1</span>
+          <div class="step-content">
+            <p><a href="https://www.propertyfinder.ae/en/transactions/buy/dubai" target="_blank" rel="noreferrer">PropertyFinder.ae のトランザクションページ</a>を開きます。</p>
+            <div class="note" style="margin-top:8px;">
+              トップページからの行き方: ページ上部メニューの <strong>「Transactions」</strong> をクリック
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">2</span>
+          <div class="step-content">
+            <p>フィルターで条件を設定します:</p>
+            <ul style="margin-top:6px;">
+              <li><strong>Buy / Rent</strong> - 検索結果URLと同じ種別を選択</li>
+              <li><strong>Location</strong> - 検索結果URLと<strong>同じエリア</strong>を選択</li>
+              <li><strong>Period</strong> - データの期間（1 Year がおすすめ。データが少ない場合は 2 Years に）</li>
+            </ul>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">3</span>
+          <div class="step-content">
+            <p>成約データ一覧が表示されたら、<strong>ブラウザのアドレスバーのURLをそのままコピー</strong>します。</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>コピーするURLの例:</strong><br/>
+          <code style="word-break:break-all;">https://www.propertyfinder.ae/en/transactions/buy/dubai/jumeirah-lake-towers-uptown-dubai-uptown-tower?period=1y&fu=0&ob=mr&sort=sqa</code><br/>
+          <span style="color:var(--muted);">↑ これが「JLT / 購入 / 過去1年」のトランザクションURLです</span>
+        </div>
+
+        <h3>まとめると</h3>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:16px; margin-top:8px;">
+          <ol style="margin:0; padding-left:20px; font-size:14px; line-height:2;">
+            <li>PropertyFinder で調べたいエリアを<strong>検索</strong> → アドレスバーのURLをコピー → <strong>「検索結果URL」</strong>欄に貼り付け</li>
+            <li>PropertyFinder の <strong>Transactions</strong> ページで同じエリアを選択 → アドレスバーのURLをコピー → <strong>「トランザクションURL」</strong>欄に貼り付け</li>
+            <li><strong>「分析して画面に表示」</strong>ボタンをクリック</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- 3. 分析モード -->
+      <div class="section" id="analysis">
+        <h2>3. 分析モードの使い方</h2>
+
+        <div class="step">
+          <span class="step-number">1</span>
+          <div class="step-content">
+            <p><strong>検索結果URL</strong>にPropertyFinderの検索結果ページのURLを入力します。</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">2</span>
+          <div class="step-content">
+            <p><strong>取得ページ数</strong>を設定します（1〜10ページ）。1ページあたり約25件のリスティングが含まれます。</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">3</span>
+          <div class="step-content">
+            <p><strong>トランザクションURL</strong>に成約データページのURLを入力します。</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">4</span>
+          <div class="step-content">
+            <p><strong>トランザクション取得ページ数</strong>を設定します。空欄にすると全ページ取得します（上限20ページ）。</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">5</span>
+          <div class="step-content">
+            <p>必要に応じて<strong>しきい値</strong>やフィルター条件を設定します。</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">6</span>
+          <div class="step-content">
+            <p><strong>「分析して画面に表示」</strong>ボタンをクリックします。</p>
+          </div>
+        </div>
+
+        <div class="note">
+          分析にはリスティングとトランザクションの両方のデータ取得が必要なため、
+          ページ数が多いと時間がかかります。まずは少ないページ数で試してみてください。
+        </div>
+      </div>
+
+      <!-- 4. CSVダウンロード -->
+      <div class="section" id="csv">
+        <h2>4. CSVダウンロードの使い方</h2>
+
+        <div class="step">
+          <span class="step-number">1</span>
+          <div class="step-content">
+            <p><strong>検索結果URL</strong>にPropertyFinderの検索結果ページのURLを入力します。</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">2</span>
+          <div class="step-content">
+            <p><strong>取得ページ数</strong>を設定します。</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-number">3</span>
+          <div class="step-content">
+            <p><strong>「CSVダウンロード（従来）」</strong>ボタンをクリックすると、CSVファイルがダウンロードされます。</p>
+          </div>
+        </div>
+
+        <p>CSVには以下の列が含まれます:</p>
+        <table class="param-table">
+          <thead><tr><th>列名</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><code>url</code></td><td>物件の詳細ページURL</td></tr>
+            <tr><td><code>property_type</code></td><td>物件タイプ（Apartment, Villa など）</td></tr>
+            <tr><td><code>price_value</code></td><td>価格（数値）</td></tr>
+            <tr><td><code>price_currency</code></td><td>通貨（AED）</td></tr>
+            <tr><td><code>title</code></td><td>物件タイトル</td></tr>
+            <tr><td><code>location_full_name</code></td><td>場所の正式名称</td></tr>
+            <tr><td><code>bedrooms</code></td><td>ベッドルーム数</td></tr>
+            <tr><td><code>bathrooms</code></td><td>バスルーム数</td></tr>
+            <tr><td><code>size_value</code></td><td>面積（数値）</td></tr>
+            <tr><td><code>size_unit</code></td><td>面積の単位（sqft）</td></tr>
+            <tr><td><code>listed_date</code></td><td>掲載日</td></tr>
+            <tr><td><code>reference</code></td><td>リファレンス番号</td></tr>
+            <tr><td><code>listing_id</code></td><td>リスティングID</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 5. パラメータ -->
+      <div class="section" id="params">
+        <h2>5. パラメータの詳細</h2>
+        <table class="param-table">
+          <thead><tr><th>パラメータ</th><th>範囲</th><th>デフォルト</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>検索結果URL</strong></td>
+              <td>-</td>
+              <td>JLT (購入)</td>
+              <td>PropertyFinderの検索結果ページURL</td>
+            </tr>
+            <tr>
+              <td><strong>取得ページ数</strong></td>
+              <td>1〜10</td>
+              <td>1</td>
+              <td>取得するリスティングのページ数。1ページ約25件。</td>
+            </tr>
+            <tr>
+              <td><strong>トランザクションURL</strong></td>
+              <td>-</td>
+              <td>JLT (1年)</td>
+              <td>成約データのページURL</td>
+            </tr>
+            <tr>
+              <td><strong>TX取得ページ数</strong></td>
+              <td>1〜20 / 空</td>
+              <td>空 (全件)</td>
+              <td>トランザクションの取得ページ数。空なら全ページ。</td>
+            </tr>
+            <tr>
+              <td><strong>しきい値 (%)</strong></td>
+              <td>1〜50</td>
+              <td>10</td>
+              <td>中央値からこの%以内なら「妥当」と判定。例: 10%なら中央値の-10%〜+10%が「妥当」。</td>
+            </tr>
+            <tr>
+              <td><strong>Beds 最小/最大</strong></td>
+              <td>0〜</td>
+              <td>空 (制限なし)</td>
+              <td>ベッドルーム数でフィルタ。Studio = 0。</td>
+            </tr>
+            <tr>
+              <td><strong>Size 最小/最大</strong></td>
+              <td>0〜</td>
+              <td>空 (制限なし)</td>
+              <td>面積(sqft)でフィルタ。リスティング・トランザクション両方に適用。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note">
+          フィルター（Beds, Size）はリスティングとトランザクションの<strong>両方</strong>に適用されます。
+          同じ条件のデータ同士で比較するためです。
+        </div>
+      </div>
+
+      <!-- 6. 結果の読み方 -->
+      <div class="section" id="reading">
+        <h2>6. 結果の読み方</h2>
+
+        <h3>サマリ</h3>
+        <ul>
+          <li><strong>トランザクション件数</strong> - 取得できた成約データの件数</li>
+          <li><strong>Price/sqft 中央値</strong> - 成約データのPrice/sqft（1平方フィートあたりの価格）の中央値</li>
+          <li><strong>Price/sqft 平均</strong> - 成約データのPrice/sqftの平均値</li>
+          <li><strong>リスティング件数</strong> - 取得できたリスティング件数</li>
+        </ul>
+
+        <h3>評価タグの意味</h3>
+        <table class="param-table">
+          <thead><tr><th>タグ</th><th>意味</th><th>条件</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="tag good">安い</span></td>
+              <td>割安な可能性がある</td>
+              <td>Price/sqftが中央値より「しきい値%」以上低い</td>
+            </tr>
+            <tr>
+              <td><span class="tag mid">妥当</span></td>
+              <td>相場に近い価格</td>
+              <td>Price/sqftが中央値の±しきい値%以内</td>
+            </tr>
+            <tr>
+              <td><span class="tag bad">高い</span></td>
+              <td>割高な可能性がある</td>
+              <td>Price/sqftが中央値より「しきい値%」以上高い</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>リスティング表の各列</h3>
+        <table class="param-table">
+          <thead><tr><th>列</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><strong>タイトル</strong></td><td>物件名（クリックで PropertyFinder の詳細ページへ）</td></tr>
+            <tr><td><strong>価格</strong></td><td>リスティング価格</td></tr>
+            <tr><td><strong>Price/sqft</strong></td><td>リスティングの1sqftあたりの価格</td></tr>
+            <tr><td><strong>Median差</strong></td><td>成約中央値との乖離率。マイナスなら割安、プラスなら割高</td></tr>
+            <tr><td><strong>Avg差</strong></td><td>成約平均値との乖離率</td></tr>
+            <tr><td><strong>Beds / Baths / Size</strong></td><td>ベッドルーム数・バスルーム数・面積</td></tr>
+            <tr><td><strong>評価</strong></td><td>安い / 妥当 / 高い</td></tr>
+          </tbody>
+        </table>
+
+        <div class="note">
+          <strong>Median差が -15% の場合:</strong> 成約データの中央値より15%安い価格設定ということです。
+          しきい値が10%であれば「安い」と判定されます。
+        </div>
+      </div>
+
+      <!-- 7. Tips & FAQ -->
+      <div class="section" id="tips">
+        <h2>7. Tips &amp; FAQ</h2>
+
+        <h3>Q: 分析に時間がかかります</h3>
+        <p>
+          PropertyFinderからデータを取得するため、ページ数が多いと時間がかかります。
+          まずはリスティング1〜2ページ、トランザクション全件で試してみてください。
+        </p>
+
+        <h3>Q: トランザクション件数が少ないです</h3>
+        <p>
+          PropertyFinderのトランザクションURLでperiodパラメータを調整して、
+          取得期間を長くしてみてください（例: <code>period=2y</code> で2年分）。
+        </p>
+
+        <h3>Q: 精度を高めるには？</h3>
+        <ul>
+          <li>フィルター（Beds, Size）を使って、同じ条件のデータ同士を比較する</li>
+          <li>トランザクション件数が多いほど中央値の信頼性が向上する</li>
+          <li>しきい値を小さくすると判定が厳しくなる（5%など）</li>
+        </ul>
+
+        <h3>Q: エラーが表示されます</h3>
+        <ul>
+          <li>URLが正しいPropertyFinderのページであることを確認してください</li>
+          <li>PropertyFinder側がメンテナンス中の場合があります</li>
+          <li>ページ数が多すぎると、タイムアウトする場合があります</li>
+        </ul>
+
+        <h3>Q: Studio物件のベッドルーム数は？</h3>
+        <p>
+          Studio物件はベッドルーム数 <code>0</code> として扱われます。
+          Beds最小を0に設定するとStudio物件も含まれます。
+        </p>
+      </div>
+
+    </div>
+  </body>
+</html>

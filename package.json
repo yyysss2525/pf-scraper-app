@@ -1,0 +1,13 @@
+{
+  "name": "pf-scrape-ui",
+  "version": "1.0.0",
+  "description": "Property Finder scraper with simple web UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
+
